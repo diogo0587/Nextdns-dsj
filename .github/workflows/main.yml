@@ -1,0 +1,222 @@
+name: Deploy NextDNS Dashboard & Proxy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  generate-files:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Backend proxy para Vercel
+      - name: Create Vercel proxy (api-proxy/index.js)
+        run: |
+          mkdir -p api-proxy
+          cat > api-proxy/index.js <<'EOF'
+export default async function handler(req, res) {
+  const nextdns = 'https://api.nextdns.io' + req.url.replace('/api-proxy', '');
+  const headers = {
+    ...req.headers,
+    'X-Api-Key': 'f31f2871d328a52a45fefadc09a1c67d0dd5d53d',
+    'User-Agent': 'Mozilla/5.0',
+    'Accept': 'application/json'
+  };
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Api-Key');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.status(200).end();
+    return;
+  }
+  const resp = await fetch(nextdns, {
+    method: req.method,
+    headers,
+    body: req.method === 'GET' ? undefined : req.body
+  });
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  const text = await resp.text();
+  res.status(resp.status).send(text);
+}
+EOF
+
+      # Frontend responsivo com temas
+      - name: Create dashboard (HTML/CSS/JS com tema e mobile)
+        run: |
+          mkdir -p dashboard
+          cat > dashboard/index.html <<'EOF'
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NextDNS Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js"></script>
+</head>
+<body data-theme="dark">
+  <header>
+    <h1>NextDNS Dashboard</h1>
+    <button id="theme-toggle">Trocar tema</button>
+  </header>
+  <main>
+    <div id="content"></div>
+  </main>
+</body>
+</html>
+EOF
+
+          cat > dashboard/style.css <<'EOF'
+:root {
+  --bg-light: #f0f0f3;
+  --bg-dark: #222831;
+  --text-light: #20232a;
+  --text-dark: #f9f9f9;
+  --primary: #00D4AA;
+  --card-radius: 12px;
+  --card-padding: 1em;
+}
+body[data-theme="light"] {
+  background: var(--bg-light);
+  color: var(--text-light);
+}
+body[data-theme="dark"] {
+  background: var(--bg-dark);
+  color: var(--text-dark);
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1em;
+}
+main {
+  padding: 1em;
+  max-width: 500px;
+  margin: auto;
+}
+#content {
+  margin-top: 1em;
+  background: var(--primary);
+  padding: var(--card-padding);
+  border-radius: var(--card-radius);
+  color: var(--text-dark);
+  font-size: 1.1em;
+}
+/* MOBILE FIRST */
+@media (max-width: 600px) {
+  main {
+    padding: .5em;
+    max-width: 100%;
+  }
+  header {
+    flex-direction: column;
+    gap: .5em;
+    text-align: center;
+  }
+  #content {
+    font-size: 1em;
+    padding: .7em;
+  }
+}
+EOF
+
+          cat > dashboard/app.js <<'EOF'
+class NextDNSApp {
+  constructor() {
+    this.config = {
+      baseUrl: 'UPDATE_ME_PROXY_URL',
+      profileId: '85d564',
+      apiKey: 'f31f2871d328a52a45fefadc09a1c67d0dd5d53d'
+    };
+    this.init();
+  }
+  init() {
+    this.setupTheme();
+    document.getElementById('theme-toggle').onclick = () => this.toggleTheme();
+    this.loadDashboard();
+  }
+  setupTheme() {
+    const theme = localStorage.getItem('nd_theme') || 'dark';
+    document.body.setAttribute('data-theme', theme);
+  }
+  toggleTheme() {
+    const current = document.body.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.body.setAttribute('data-theme', next);
+    localStorage.setItem('nd_theme', next);
+  }
+  async loadDashboard() {
+    const container = document.getElementById('content');
+    container.innerHTML = 'Carregando dashboard...';
+    try {
+      const resp = await fetch(`${this.config.baseUrl}/profiles/${this.config.profileId}/analytics/status`, {
+        headers: {
+          'X-Api-Key': this.config.apiKey,
+          'Content-Type': 'application/json'
+        }
+      });
+      const raw = await resp.text();
+      container.innerHTML = `<b>Status (${resp.status}):</b><pre>${raw}</pre>`;
+    } catch (e) {
+      container.textContent = `Erro ao consultar NextDNS: ${e}`;
+    }
+  }
+}
+window.app = new NextDNSApp();
+EOF
+
+      # Commit dos arquivos automáticos
+      - name: Commit generated files
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "github-actions"
+          git add api-proxy dashboard
+          git commit -m "Criando arquivos do proxy, dashboard responsivo e temas" || echo "Sem alterações"
+          git push
+
+  deploy-proxy-vercel:
+    needs: generate-files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar Vercel CLI
+        run: npm install --global vercel
+      - name: Deploy proxy no Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          cd api-proxy
+          vercel --prod --token $VERCEL_TOKEN --confirm > vercel_url.txt
+          export PROXY_URL=$(cat vercel_url.txt | grep 'https://' | tail -n1)
+          echo "PROXY_URL=${PROXY_URL}" >> $GITHUB_ENV
+
+  patch-dashboard-baseurl:
+    needs: deploy-proxy-vercel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch baseUrl do app.js para proxy Vercel
+        run: |
+          PROXY_URL=$(cat ./api-proxy/vercel_url.txt | grep 'https://' | tail -n1)
+          sed -i "s|baseUrl: 'UPDATE_ME_PROXY_URL'|baseUrl: '${PROXY_URL}/api-proxy'|g" dashboard/app.js
+          git config --global user.email "actions@github.com"
+          git config --global user.name "github-actions"
+          git add dashboard/app.js
+          git commit -m "Atualiza baseUrl do dashboard para proxy Vercel" || echo "Nada para commit"
+          git push
+
+  deploy-dashboard-gh-pages:
+    needs: patch-dashboard-baseurl
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publica dashboard no GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dashboard
+          
