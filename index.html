@@ -5,15 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NextDNS Dashboard</title>
   <link rel="stylesheet" href="style.css">
-  <script src="app.js"></script>
+  <script src="app.js" defer></script>
 </head>
 <body data-theme="dark">
   <header>
-    <h1>NextDNS Dashboard</h1>
-    <button id="theme-toggle">Trocar tema</button>
+    <h1>🛡️ NextDNS Dashboard</h1>
+    <button id="theme-toggle" class="btn-theme">🌙 / ☀️</button>
   </header>
+  
+  <nav class="menu">
+    <button class="menu-item active" data-section="analytics">📊 Analytics</button>
+    <button class="menu-item" data-section="logs">📝 Logs</button>
+    <button class="menu-item" data-section="security">🔒 Security</button>
+    <button class="menu-item" data-section="privacy">🕵️ Privacy</button>
+    <button class="menu-item" data-section="parental">👨‍👩‍👧‍👦 Parental</button>
+    <button class="menu-item" data-section="denylist">🚫 Denylist</button>
+    <button class="menu-item" data-section="allowlist">✅ Allowlist</button>
+    <button class="menu-item" data-section="settings">⚙️ Settings</button>
+  </nav>
+
   <main>
-    <div id="content"></div>
+    <div id="content" class="content-container">
+      <div class="loader">Carregando...</div>
+    </div>
   </main>
+
+  <footer>
+    <p>NextDNS Dashboard | Profile: <span id="profile-id">85d564</span></p>
+  </footer>
 </body>
 </html>
