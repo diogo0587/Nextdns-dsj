@@ -3,8 +3,8 @@ name: Deploy NextDNS Dashboard & Proxy
 on:
   push:
     branches: [main]
-on: workflow_dispatch
-
+-main
+workflow_dispatch:
 jobs:
   generate-files:
     runs-on: ubuntu-latest
