@@ -3,6 +3,7 @@ name: Deploy NextDNS Dashboard & Proxy
 on:
   push:
     branches: [main]
+on: workflow_dispatch
 
 jobs:
   generate-files:
