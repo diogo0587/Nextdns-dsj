@@ -76,7 +76,7 @@ jobs:
           name: vercel-url
           path: ./
 
-      - name: Create dashboard files
+      - name: Create dashboard HTML
         run: |
           mkdir -p dashboard
           cat > dashboard/index.html << 'EOF'
@@ -87,74 +87,360 @@ jobs:
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>NextDNS Dashboard</title>
             <link rel="stylesheet" href="style.css">
-            <script src="app.js"></script>
+            <script src="app.js" defer></script>
           </head>
           <body data-theme="dark">
             <header>
-              <h1>NextDNS Dashboard</h1>
-              <button id="theme-toggle">Trocar tema</button>
+              <h1>🛡️ NextDNS Dashboard</h1>
+              <button id="theme-toggle" class="btn-theme">🌙 / ☀️</button>
             </header>
+            
+            <nav class="menu">
+              <button class="menu-item active" data-section="analytics">📊 Analytics</button>
+              <button class="menu-item" data-section="logs">📝 Logs</button>
+              <button class="menu-item" data-section="security">🔒 Security</button>
+              <button class="menu-item" data-section="privacy">🕵️ Privacy</button>
+              <button class="menu-item" data-section="parental">👨‍👩‍👧‍👦 Parental</button>
+              <button class="menu-item" data-section="denylist">🚫 Denylist</button>
+              <button class="menu-item" data-section="allowlist">✅ Allowlist</button>
+              <button class="menu-item" data-section="settings">⚙️ Settings</button>
+            </nav>
+
             <main>
-              <div id="content"></div>
+              <div id="content" class="content-container">
+                <div class="loader">Carregando...</div>
+              </div>
             </main>
+
+            <footer>
+              <p>NextDNS Dashboard | Profile: <span id="profile-id">85d564</span></p>
+            </footer>
           </body>
           </html>
           EOF
 
+      - name: Create dashboard CSS
+        run: |
           cat > dashboard/style.css << 'EOF'
-          :root {
-            --bg-light: #f0f0f3;
-            --bg-dark: #222831;
-            --text-light: #20232a;
-            --text-dark: #f9f9f9;
-            --primary: #00D4AA;
-            --card-radius: 12px;
-            --card-padding: 1em;
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
           }
+
+          :root {
+            --bg-light: #f5f7fa;
+            --bg-dark: #1a1d2e;
+            --card-light: #ffffff;
+            --card-dark: #252938;
+            --text-light: #2d3748;
+            --text-dark: #e2e8f0;
+            --primary: #00d4aa;
+            --primary-hover: #00b894;
+            --secondary: #6c5ce7;
+            --danger: #ff4757;
+            --warning: #ffa502;
+            --success: #26de81;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+          }
+
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            transition: var(--transition);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+          }
+
           body[data-theme="light"] {
             background: var(--bg-light);
             color: var(--text-light);
           }
+
           body[data-theme="dark"] {
             background: var(--bg-dark);
             color: var(--text-dark);
           }
+
           header {
+            background: var(--primary);
+            color: white;
+            padding: 1.5rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1em;
+            box-shadow: var(--shadow);
           }
-          main {
-            padding: 1em;
-            max-width: 500px;
-            margin: auto;
+
+          header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
           }
-          #content {
-            margin-top: 1em;
+
+          .btn-theme {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: var(--transition);
+          }
+
+          .btn-theme:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+          }
+
+          .menu {
+            display: flex;
+            gap: 0.5rem;
+            padding: 1rem 2rem;
+            overflow-x: auto;
+            background: body[data-theme="dark"] ? var(--card-dark) : var(--card-light);
+            box-shadow: var(--shadow);
+            flex-wrap: wrap;
+          }
+
+          .menu-item {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: body[data-theme="dark"] ? var(--text-dark) : var(--text-light);
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+            white-space: nowrap;
+          }
+
+          .menu-item:hover {
             background: var(--primary);
-            padding: var(--card-padding);
-            border-radius: var(--card-radius);
-            color: var(--text-dark);
-            font-size: 1.1em;
+            color: white;
+            transform: translateY(-2px);
           }
-          @media (max-width: 600px) {
+
+          .menu-item.active {
+            background: var(--primary);
+            color: white;
+          }
+
+          main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+          }
+
+          .content-container {
+            background: body[data-theme="dark"] ? var(--card-dark) : var(--card-light);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            min-height: 400px;
+          }
+
+          .loader {
+            text-align: center;
+            padding: 3rem;
+            font-size: 1.2rem;
+            color: var(--primary);
+          }
+
+          .card {
+            background: body[data-theme="dark"] ? rgba(255,255,255,0.05) : rgba(0,0,0,0.02);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--primary);
+          }
+
+          .card h3 {
+            margin-bottom: 1rem;
+            color: var(--primary);
+          }
+
+          .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+          }
+
+          .stat-box {
+            background: var(--primary);
+            color: white;
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            text-align: center;
+          }
+
+          .stat-box h4 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+          }
+
+          .stat-box p {
+            opacity: 0.9;
+          }
+
+          .log-entry {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+
+          .log-entry:last-child {
+            border-bottom: none;
+          }
+
+          .log-domain {
+            font-weight: 600;
+            color: var(--primary);
+          }
+
+          .log-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+          }
+
+          .log-status.blocked {
+            background: var(--danger);
+            color: white;
+          }
+
+          .log-status.allowed {
+            background: var(--success);
+            color: white;
+          }
+
+          .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+            margin: 0.5rem;
+          }
+
+          .btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+          }
+
+          .btn-danger {
+            background: var(--danger);
+          }
+
+          .btn-danger:hover {
+            background: #ee5a6f;
+          }
+
+          .input-group {
+            margin: 1rem 0;
+          }
+
+          .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+          }
+
+          .input-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--primary);
+            border-radius: var(--border-radius);
+            background: transparent;
+            color: inherit;
+            font-size: 1rem;
+          }
+
+          .toggle {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: rgba(0,0,0,0.02);
+            border-radius: var(--border-radius);
+          }
+
+          .toggle-switch {
+            width: 60px;
+            height: 30px;
+            background: #ccc;
+            border-radius: 30px;
+            position: relative;
+            cursor: pointer;
+            transition: var(--transition);
+          }
+
+          .toggle-switch.active {
+            background: var(--success);
+          }
+
+          .toggle-switch::after {
+            content: '';
+            width: 26px;
+            height: 26px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: var(--transition);
+          }
+
+          .toggle-switch.active::after {
+            left: 32px;
+          }
+
+          footer {
+            background: var(--primary);
+            color: white;
+            text-align: center;
+            padding: 1.5rem;
+            margin-top: auto;
+          }
+
+          @media (max-width: 768px) {
+            header h1 {
+              font-size: 1.3rem;
+            }
+
+            .menu {
+              padding: 0.5rem 1rem;
+            }
+
+            .menu-item {
+              padding: 0.5rem 1rem;
+              font-size: 0.9rem;
+            }
+
             main {
-              padding: .5em;
-              max-width: 100%;
+              padding: 1rem;
             }
-            header {
-              flex-direction: column;
-              gap: .5em;
-              text-align: center;
-            }
-            #content {
-              font-size: 1em;
-              padding: .7em;
+
+            .stat-grid {
+              grid-template-columns: 1fr;
             }
           }
           EOF
 
+      - name: Create dashboard JavaScript
+        run: |
           cat > dashboard/app.js << 'EOF'
           class NextDNSApp {
             constructor() {
@@ -163,40 +449,388 @@ jobs:
                 profileId: '85d564',
                 apiKey: 'f31f2871d328a52a45fefadc09a1c67d0dd5d53d'
               };
+              this.currentSection = 'analytics';
               this.init();
             }
+
             init() {
               this.setupTheme();
+              this.setupMenuNavigation();
               document.getElementById('theme-toggle').onclick = () => this.toggleTheme();
-              this.loadDashboard();
+              document.getElementById('profile-id').textContent = this.config.profileId;
+              this.loadSection('analytics');
             }
+
             setupTheme() {
               const theme = localStorage.getItem('nd_theme') || 'dark';
               document.body.setAttribute('data-theme', theme);
             }
+
             toggleTheme() {
               const current = document.body.getAttribute('data-theme');
               const next = current === 'dark' ? 'light' : 'dark';
               document.body.setAttribute('data-theme', next);
               localStorage.setItem('nd_theme', next);
             }
-            async loadDashboard() {
-              const container = document.getElementById('content');
-              container.innerHTML = 'Carregando dashboard...';
+
+            setupMenuNavigation() {
+              const menuItems = document.querySelectorAll('.menu-item');
+              menuItems.forEach(item => {
+                item.addEventListener('click', () => {
+                  menuItems.forEach(m => m.classList.remove('active'));
+                  item.classList.add('active');
+                  const section = item.getAttribute('data-section');
+                  this.loadSection(section);
+                });
+              });
+            }
+
+            async apiRequest(endpoint, method = 'GET', body = null) {
               try {
-                const resp = await fetch(`${this.config.baseUrl}/profiles/${this.config.profileId}/analytics/status`, {
+                const options = {
+                  method,
                   headers: {
                     'X-Api-Key': this.config.apiKey,
                     'Content-Type': 'application/json'
                   }
-                });
-                const raw = await resp.text();
-                container.innerHTML = `<b>Status (${resp.status}):</b><pre>${raw}</pre>`;
+                };
+                if (body) options.body = JSON.stringify(body);
+                
+                const resp = await fetch(`${this.config.baseUrl}${endpoint}`, options);
+                return await resp.json();
               } catch (e) {
-                container.textContent = `Erro ao consultar NextDNS: ${e}`;
+                console.error('API Error:', e);
+                return { error: e.message };
               }
             }
+
+            showLoader() {
+              document.getElementById('content').innerHTML = '<div class="loader">Carregando...</div>';
+            }
+
+            loadSection(section) {
+              this.currentSection = section;
+              this.showLoader();
+              
+              switch(section) {
+                case 'analytics':
+                  this.loadAnalytics();
+                  break;
+                case 'logs':
+                  this.loadLogs();
+                  break;
+                case 'security':
+                  this.loadSecurity();
+                  break;
+                case 'privacy':
+                  this.loadPrivacy();
+                  break;
+                case 'parental':
+                  this.loadParental();
+                  break;
+                case 'denylist':
+                  this.loadDenylist();
+                  break;
+                case 'allowlist':
+                  this.loadAllowlist();
+                  break;
+                case 'settings':
+                  this.loadSettings();
+                  break;
+              }
+            }
+
+            async loadAnalytics() {
+              const data = await this.apiRequest(`/profiles/${this.config.profileId}/analytics/status`);
+              
+              const html = `
+                <div class="card">
+                  <h3>📊 Analytics & Status</h3>
+                  <div class="stat-grid">
+                    <div class="stat-box">
+                      <h4>${data.queries || 0}</h4>
+                      <p>Total Queries</p>
+                    </div>
+                    <div class="stat-box">
+                      <h4>${data.blocked || 0}</h4>
+                      <p>Blocked</p>
+                    </div>
+                    <div class="stat-box">
+                      <h4>${data.relayed || 0}</h4>
+                      <p>Relayed</p>
+                    </div>
+                    <div class="stat-box">
+                      <h4>${((data.blocked / data.queries) * 100 || 0).toFixed(1)}%</h4>
+                      <p>Block Rate</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <h3>📈 Dados Completos</h3>
+                  <pre>${JSON.stringify(data, null, 2)}</pre>
+                </div>
+              `;
+              document.getElementById('content').innerHTML = html;
+            }
+
+            async loadLogs() {
+              const data = await this.apiRequest(`/profiles/${this.config.profileId}/logs?limit=50`);
+              
+              let html = `
+                <div class="card">
+                  <h3>📝 Logs Recentes (50 últimos)</h3>
+                  <button class="btn" onclick="app.refreshSection()">🔄 Atualizar</button>
+              `;
+              
+              if (data.data && data.data.length > 0) {
+                data.data.forEach(log => {
+                  const status = log.status === 2 ? 'blocked' : 'allowed';
+                  const statusText = log.status === 2 ? 'Bloqueado' : 'Permitido';
+                  html += `
+                    <div class="log-entry">
+                      <div>
+                        <div class="log-domain">${log.domain || 'N/A'}</div>
+                        <small>${new Date(log.timestamp).toLocaleString('pt-BR')}</small>
+                      </div>
+                      <span class="log-status ${status}">${statusText}</span>
+                    </div>
+                  `;
+                });
+              } else {
+                html += '<p>Nenhum log encontrado.</p>';
+              }
+              
+              html += '</div>';
+              document.getElementById('content').innerHTML = html;
+            }
+
+            async loadSecurity() {
+              const data = await this.apiRequest(`/profiles/${this.config.profileId}/security`);
+              
+              const html = `
+                <div class="card">
+                  <h3>🔒 Security Settings</h3>
+                  ${this.createToggle('Threat Intelligence Feeds', data.threatIntelligenceFeeds || false, 'threatIntelligenceFeeds')}
+                  ${this.createToggle('AI-Driven Threat Detection', data.aiThreatDetection || false, 'aiThreatDetection')}
+                  ${this.createToggle('Google Safe Browsing', data.googleSafeBrowsing || false, 'googleSafeBrowsing')}
+                  ${this.createToggle('Cryptojacking Protection', data.cryptojacking || false, 'cryptojacking')}
+                  ${this.createToggle('DNS Rebinding Protection', data.dnsRebindingProtection || false, 'dnsRebindingProtection')}
+                  ${this.createToggle('IDN Homograph Attacks Protection', data.idnHomographs || false, 'idnHomographs')}
+                  ${this.createToggle('Typosquatting Protection', data.typosquatting || false, 'typosquatting')}
+                  ${this.createToggle('Domain Generation Algorithms (DGAs)', data.dga || false, 'dga')}
+                  ${this.createToggle('Block Newly Registered Domains (NRDs)', data.nrd || false, 'nrd')}
+                  ${this.createToggle('Block Dynamic DNS Hostnames', data.ddns || false, 'ddns')}
+                  ${this.createToggle('Block Parked Domains', data.parking || false, 'parking')}
+                  <button class="btn" onclick="app.saveSecurity()">💾 Salvar Alterações</button>
+                </div>
+                <div class="card">
+                  <h3>📋 Dados Completos</h3>
+                  <pre>${JSON.stringify(data, null, 2)}</pre>
+                </div>
+              `;
+              document.getElementById('content').innerHTML = html;
+            }
+
+            async loadPrivacy() {
+              const data = await this.apiRequest(`/profiles/${this.config.profileId}/privacy`);
+              
+              const html = `
+                <div class="card">
+                  <h3>🕵️ Privacy Settings</h3>
+                  ${this.createToggle('Block Disguised Third-Party Trackers', data.disguisedTrackers || false, 'disguisedTrackers')}
+                  ${this.createToggle('Allow Affiliate & Tracking Links', data.allowAffiliate || false, 'allowAffiliate')}
+                  ${this.createToggle('Block Aggressive Blocklists', data.blockAggressive || false, 'blockAggressive')}
+                  <h4 style="margin-top: 2rem;">Blocklists Ativas:</h4>
+                  <p>${data.blocklists ? data.blocklists.join(', ') : 'Nenhuma'}</p>
+                  <button class="btn" onclick="app.savePrivacy()">💾 Salvar Alterações</button>
+                </div>
+                <div class="card">
+                  <h3>📋 Dados Completos</h3>
+                  <pre>${JSON.stringify(data, null, 2)}</pre>
+                </div>
+              `;
+              document.getElementById('content').innerHTML = html;
+            }
+
+            async loadParental() {
+              const data = await this.apiRequest(`/profiles/${this.config.profileId}/parentalControl`);
+              
+              const html = `
+                <div class="card">
+                  <h3>👨‍👩‍👧‍👦 Parental Control</h3>
+                  ${this.createToggle('Safe Search', data.safeSearch || false, 'safeSearch')}
+                  ${this.createToggle('YouTube Restricted Mode', data.youtubeRestrictedMode || false, 'youtubeRestrictedMode')}
+                  ${this.createToggle('Block Bypass Methods', data.blockBypass || false, 'blockBypass')}
+                  
+                  <h4 style="margin-top: 2rem;">Categorias Bloqueadas:</h4>
+                  ${data.categories ? data.categories.map(cat => `
+                    <div class="toggle">
+                      <span>${cat.id}</span>
+                      <div class="toggle-switch ${cat.active ? 'active' : ''}" data-category="${cat.id}"></div>
+                    </div>
+                  `).join('') : '<p>Nenhuma categoria configurada</p>'}
+                  
+                  <h4 style="margin-top: 2rem;">Serviços/Apps Bloqueados:</h4>
+                  ${data.services ? data.services.map(svc => `
+                    <div class="toggle">
+                      <span>${svc.id}</span>
+                      <div class="toggle-switch ${svc.active ? 'active' : ''}" data-service="${svc.id}"></div>
+                    </div>
+                  `).join('') : '<p>Nenhum serviço bloqueado</p>'}
+                  
+                  <button class="btn" onclick="app.saveParental()">💾 Salvar Alterações</button>
+                </div>
+                <div class="card">
+                  <h3>📋 Dados Completos</h3>
+                  <pre>${JSON.stringify(data, null, 2)}</pre>
+                </div>
+              `;
+              document.getElementById('content').innerHTML = html;
+            }
+
+            async loadDenylist() {
+              const data = await this.apiRequest(`/profiles/${this.config.profileId}/denylist`);
+              
+              let html = `
+                <div class="card">
+                  <h3>🚫 Denylist (Domínios Bloqueados)</h3>
+                  <div class="input-group">
+                    <label>Adicionar domínio:</label>
+                    <input type="text" id="deny-domain" placeholder="exemplo.com">
+                    <button class="btn" onclick="app.addToDenylist()">➕ Adicionar</button>
+                  </div>
+                  <div style="margin-top: 2rem;">
+              `;
+              
+              if (data && data.length > 0) {
+                data.forEach(item => {
+                  html += `
+                    <div class="log-entry">
+                      <span class="log-domain">${item.domain || item.id}</span>
+                      <button class="btn btn-danger" onclick="app.removeFromDenylist('${item.id}')">🗑️ Remover</button>
+                    </div>
+                  `;
+                });
+              } else {
+                html += '<p>Nenhum domínio na denylist</p>';
+              }
+              
+              html += '</div></div>';
+              document.getElementById('content').innerHTML = html;
+            }
+
+            async loadAllowlist() {
+              const data = await this.apiRequest(`/profiles/${this.config.profileId}/allowlist`);
+              
+              let html = `
+                <div class="card">
+                  <h3>✅ Allowlist (Domínios Permitidos)</h3>
+                  <div class="input-group">
+                    <label>Adicionar domínio:</label>
+                    <input type="text" id="allow-domain" placeholder="exemplo.com">
+                    <button class="btn" onclick="app.addToAllowlist()">➕ Adicionar</button>
+                  </div>
+                  <div style="margin-top: 2rem;">
+              `;
+              
+              if (data && data.length > 0) {
+                data.forEach(item => {
+                  html += `
+                    <div class="log-entry">
+                      <span class="log-domain">${item.domain || item.id}</span>
+                      <button class="btn btn-danger" onclick="app.removeFromAllowlist('${item.id}')">🗑️ Remover</button>
+                    </div>
+                  `;
+                });
+              } else {
+                html += '<p>Nenhum domínio na allowlist</p>';
+              }
+              
+              html += '</div></div>';
+              document.getElementById('content').innerHTML = html;
+            }
+
+            async loadSettings() {
+              const data = await this.apiRequest(`/profiles/${this.config.profileId}`);
+              
+              const html = `
+                <div class="card">
+                  <h3>⚙️ Settings & Profile Info</h3>
+                  <div class="input-group">
+                    <label>Profile Name:</label>
+                    <input type="text" value="${data.name || 'N/A'}" disabled>
+                  </div>
+                  <div class="input-group">
+                    <label>Profile ID:</label>
+                    <input type="text" value="${this.config.profileId}" disabled>
+                  </div>
+                  <div class="input-group">
+                    <label>Fingerprint:</label>
+                    <input type="text" value="${data.fingerprint || 'N/A'}" disabled>
+                  </div>
+                </div>
+                <div class="card">
+                  <h3>📋 Dados Completos do Profile</h3>
+                  <pre>${JSON.stringify(data, null, 2)}</pre>
+                </div>
+              `;
+              document.getElementById('content').innerHTML = html;
+            }
+
+            createToggle(label, active, id) {
+              return `
+                <div class="toggle">
+                  <span>${label}</span>
+                  <div class="toggle-switch ${active ? 'active' : ''}" data-toggle="${id}" onclick="app.toggleSwitch(this)"></div>
+                </div>
+              `;
+            }
+
+            toggleSwitch(element) {
+              element.classList.toggle('active');
+            }
+
+            refreshSection() {
+              this.loadSection(this.currentSection);
+            }
+
+            async addToDenylist() {
+              const domain = document.getElementById('deny-domain').value;
+              if (!domain) return alert('Digite um domínio');
+              await this.apiRequest(`/profiles/${this.config.profileId}/denylist`, 'POST', { id: domain });
+              this.loadDenylist();
+            }
+
+            async removeFromDenylist(id) {
+              await this.apiRequest(`/profiles/${this.config.profileId}/denylist/${id}`, 'DELETE');
+              this.loadDenylist();
+            }
+
+            async addToAllowlist() {
+              const domain = document.getElementById('allow-domain').value;
+              if (!domain) return alert('Digite um domínio');
+              await this.apiRequest(`/profiles/${this.config.profileId}/allowlist`, 'POST', { id: domain });
+              this.loadAllowlist();
+            }
+
+            async removeFromAllowlist(id) {
+              await this.apiRequest(`/profiles/${this.config.profileId}/allowlist/${id}`, 'DELETE');
+              this.loadAllowlist();
+            }
+
+            async saveSecurity() {
+              alert('Função de salvar Security em desenvolvimento');
+            }
+
+            async savePrivacy() {
+              alert('Função de salvar Privacy em desenvolvimento');
+            }
+
+            async saveParental() {
+              alert('Função de salvar Parental em desenvolvimento');
+            }
           }
+
           window.app = new NextDNSApp();
           EOF
 
