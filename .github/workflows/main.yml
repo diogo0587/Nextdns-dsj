@@ -2,9 +2,10 @@ name: Deploy NextDNS Dashboard & Proxy
 
 on:
   push:
-    branches: [main]
--main
-workflow_dispatch:
+    branches:
+      - main
+  workflow_dispatch:
+
 jobs:
   generate-files:
     runs-on: ubuntu-latest
@@ -166,8 +167,6 @@ window.app = new NextDNSApp();
 EOF
 
       - name: Commit generated files
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global user.email "actions@github.com"
           git config --global user.name "github-actions"
@@ -180,26 +179,36 @@ EOF
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Instalar Vercel CLI
         run: npm install --global vercel
+
       - name: Deploy proxy no Vercel
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           cd api-proxy
-          vercel --prod --token $VERCEL_TOKEN --confirm > vercel_url.txt
-          export PROXY_URL=$(cat vercel_url.txt | grep 'https://' | tail -n1)
-          echo "PROXY_URL=${PROXY_URL}" >> $GITHUB_ENV
+          vercel --prod --token "$VERCEL_TOKEN" --confirm > vercel_raw.txt
+          grep 'https://' vercel_raw.txt | tail -n1 > vercel_url.txt
+          echo "Encontrada URL do proxy:"
+          cat vercel_url.txt
           cd ..
+          git config --global user.email "actions@github.com"
+          git config --global user.name "github-actions"
+          git add api-proxy/vercel_url.txt
+          git commit -m "Armazena URL do proxy Vercel" || echo "Sem alterações de URL"
+          git push
 
   patch-dashboard-baseurl:
     needs: deploy-proxy-vercel
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Patch baseUrl do app.js para proxy Vercel
         run: |
           PROXY_URL=$(cat ./api-proxy/vercel_url.txt | grep 'https://' | tail -n1)
+          echo "Usando PROXY_URL=${PROXY_URL}"
           sed -i "s|baseUrl: 'UPDATE_ME_PROXY_URL'|baseUrl: '${PROXY_URL}/api-proxy'|g" dashboard/app.js
           git config --global user.email "actions@github.com"
           git config --global user.name "github-actions"
@@ -212,8 +221,9 @@ EOF
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Publica dashboard no GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ github.token }}
           publish_dir: dashboard
