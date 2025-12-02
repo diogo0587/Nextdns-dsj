@@ -1,7 +1,7 @@
 class NextDNSApp {
   constructor() {
     this.config = {
-      baseUrl: 'https://api-proxy-atjvh8uiq-diogo0587s-projects.vercel.app/api-proxy',
+      baseUrl: 'https://api-proxy-16eofw170-diogo0587s-projects.vercel.app/api-proxy',
       profileId: '85d564',
       apiKey: 'f31f2871d328a52a45fefadc09a1c67d0dd5d53d'
     };
